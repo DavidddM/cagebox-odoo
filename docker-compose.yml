@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${ODOO_DB_USER:-odoo}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-odoo}
+      POSTGRES_DB: postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks:
+      - sandbox-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ODOO_DB_USER:-odoo}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  squid-proxy:
+    image: ubuntu/squid
+    volumes:
+      - ./config/squid.conf:/etc/squid/squid.conf:ro
+    networks:
+      - sandbox-net
+      - internet
+    restart: unless-stopped
+
+  claude-sandbox:
+    init: true
+    build: .
+    container_name: claude-sandbox
+    env_file: .env
+    environment:
+      HTTP_PROXY: http://squid-proxy:3128
+      HTTPS_PROXY: http://squid-proxy:3128
+      http_proxy: http://squid-proxy:3128
+      https_proxy: http://squid-proxy:3128
+      NO_PROXY: db,localhost,127.0.0.1,host.docker.internal
+      no_proxy: db,localhost,127.0.0.1,host.docker.internal
+      ODOO_DB_HOST: ${ODOO_DB_HOST:-db}
+      ODOO_DB_PORT: ${ODOO_DB_PORT:-5432}
+      ODOO_DB_USER: ${ODOO_DB_USER:-odoo}
+      ODOO_DB_PASSWORD: ${ODOO_DB_PASSWORD:-odoo}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PGPASSWORD: ${PG_PASSWORD:-odoo}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GIT_USER_NAME: ${GIT_USER_NAME:-}
+      GIT_USER_EMAIL: ${GIT_USER_EMAIL:-}
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - claude-config:/home/claude/.claude
+      - pip-cache:/home/claude/.cache/pip
+    networks:
+      - sandbox-net
+    depends_on:
+      squid-proxy:
+        condition: service_started
+      db:
+        condition: service_healthy
+        # Optional: allows sandbox to start without DB for non-Odoo tasks
+        required: false
+    ports:
+      - "${ODOO_PORT:-8069}:8069"
+    stdin_open: true
+    tty: true
+
+networks:
+  sandbox-net:
+    internal: true
+  internet:
+
+volumes:
+  pg-data:
+  claude-config:
+  pip-cache:

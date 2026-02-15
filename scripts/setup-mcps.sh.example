@@ -1,0 +1,8 @@
+#!/bin/bash
+# MCP server auto-setup — runs on first boot only.
+# Copy to scripts/setup-mcps.sh and customize.
+# This file is gitignored.
+#
+# Example:
+#   claude mcp add my-server -- npx -y @some/mcp-server
+#   claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"

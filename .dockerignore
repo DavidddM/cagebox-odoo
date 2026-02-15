@@ -1,0 +1,7 @@
+.env
+.git
+docker-compose.override.yml
+.DS_Store
+README.md
+LICENSE
+scripts/test-sandbox.sh

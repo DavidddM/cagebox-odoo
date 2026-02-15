@@ -1,0 +1,6 @@
+.env
+docker-compose.override.yml
+scripts/setup-plugins.sh
+scripts/setup-mcps.sh
+.DS_Store
+.claude/settings.local.json
