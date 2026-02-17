@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
 CMD="${1:-}"
 
@@ -35,4 +35,15 @@ case "$CMD" in
         ;;
 esac
 
-exec /usr/local/lib/git-bin/git "$@"
+/usr/local/lib/git-bin/git "$@"
+EXIT_CODE=$?
+
+if [ "$1" = "checkout" ] && echo "$PWD" | grep -q '/workspace/odoo'; then
+    source /home/claude/odoo-venv/bin/activate
+    pip install --quiet "setuptools<81"
+    for req in /workspace/*/requirements.txt; do
+        [ -f "$req" ] && pip install --quiet -r "$req"
+    done
+fi
+
+exit $EXIT_CODE
