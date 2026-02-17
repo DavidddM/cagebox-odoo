@@ -1,0 +1,22 @@
+#!/bin/bash
+# Plugin and MCP auto-setup — runs on every boot but skips
+# sections that are already configured.
+# Copy to scripts/setup-tools.sh and customize.
+# This file is gitignored.
+set -e
+
+# === Plugins ===
+if [ ! -f /home/claude/.claude/plugins/installed_plugins.json ]; then
+    echo "Installing plugins..."
+    # claude plugin marketplace add your-org/your-plugins
+    # claude plugin install your-plugin@your-marketplace
+    echo "Plugin setup complete."
+fi
+
+# === MCP Servers ===
+if [ ! -f /home/claude/.claude/.mcp.json ]; then
+    echo "Setting up MCP servers..."
+    # claude mcp add my-server -- npx -y @some/mcp-server
+    # claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
+    echo "MCP setup complete."
+fi

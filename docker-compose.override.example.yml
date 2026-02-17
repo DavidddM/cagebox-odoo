@@ -6,8 +6,8 @@ services:
     volumes:
       # === Project mounts (required) ===
       - ~/projects/my-addons:/workspace/my-addons
-      - ~/projects/odoo:/workspace/odoo:ro
-      # - ~/projects/enterprise:/workspace/enterprise:ro
+      - ~/projects/odoo:/workspace/odoo
+      # - ~/projects/enterprise:/workspace/enterprise
 
       # === Odoo config (optional) ===
       # - ./config/odoo.conf:/etc/odoo/odoo.conf
@@ -15,8 +15,7 @@ services:
 
       # === Plugin & MCP auto-setup (optional) ===
       # Create from .example files in scripts/, then uncomment:
-      # - ./scripts/setup-plugins.sh:/home/claude/setup-plugins.sh:ro
-      # - ./scripts/setup-mcps.sh:/home/claude/setup-mcps.sh:ro
+      # - ./scripts/setup-tools.sh:/scripts/setup-tools.sh:ro
 
 # Uncomment if using odoo-data volume above:
 # volumes:

@@ -52,15 +52,18 @@ EOF
     sudo mv /tmp/odoo.conf /etc/odoo/odoo.conf
 fi
 
-if [ ! -f /home/claude/.claude/plugins/installed_plugins.json ] && [ -f /home/claude/setup-plugins.sh ]; then
-  echo "First boot: running plugin setup..."
-  su claude -c '/home/claude/setup-plugins.sh'
+if [ ! -f /home/claude/.claude/CLAUDE.md ]; then
+    cp /config/CLAUDE.md /home/claude/.claude/CLAUDE.md
+    chown claude:claude /home/claude/.claude/CLAUDE.md
 fi
 
-if [ ! -f /home/claude/.claude/mcp_setup_done ] && [ -f /home/claude/setup-mcps.sh ]; then
-  echo "Running MCP setup..."
-  su claude -c '/home/claude/setup-mcps.sh'
-  touch /home/claude/.claude/mcp_setup_done
+if [ -f /scripts/setup-tools.sh ]; then
+    su -c '/scripts/setup-tools.sh' claude
+fi
+
+if [ ! -L /home/claude/.claude.json ]; then
+    rm -f /home/claude/.claude.json
+    ln -s /home/claude/.claude/claude.json /home/claude/.claude.json
 fi
 
 su claude -c 'tmux new-session -d -s main -x 220 -y 50'

@@ -96,7 +96,7 @@ for domain in google.com facebook.com example.com; do
 done
 
 # Plugins
-if [ -f scripts/setup-plugins.sh ]; then
+if [ -f scripts/setup-tools.sh ]; then
   echo "[7] Plugins"
   PLUGINS=$($DC cat /home/claude/.claude/plugins/installed_plugins.json 2>&1)
   if echo "$PLUGINS" | grep -q '{' && [ -n "$PLUGINS" ]; then
@@ -108,12 +108,12 @@ if [ -f scripts/setup-plugins.sh ]; then
   fi
 else
   echo "[7] Plugins"
-  echo "  ⚠ skipped (no setup-plugins.sh)"
+  echo "  ⚠ skipped (no setup-tools.sh)"
   WARN=$((WARN+1))
 fi
 
 # MCP servers
-if [ -f scripts/setup-mcps.sh ]; then
+if [ -f scripts/setup-tools.sh ]; then
   echo "[8] MCP servers"
   MCP=$($DC find /home/claude/.claude -name ".mcp.json" -exec cat {} \; 2>&1)
   if echo "$MCP" | grep -q '{' && [ -n "$MCP" ]; then
@@ -125,7 +125,7 @@ if [ -f scripts/setup-mcps.sh ]; then
   fi
 else
   echo "[8] MCP servers"
-  echo "  ⚠ skipped (no setup-mcps.sh)"
+  echo "  ⚠ skipped (no setup-tools.sh)"
   WARN=$((WARN+1))
 fi
 
@@ -139,10 +139,10 @@ echo "[10] Odoo Python import"
 ODOO_OUT=$($DC bash -c "source /home/claude/odoo-venv/bin/activate && PYTHONPATH=/workspace/odoo python -c 'import odoo; print(\"OK\")'" 2>&1)
 check "import odoo" "OK" "$ODOO_OUT"
 
-# Read-only mounts
+# Mount permissions
 echo "[11] Mount permissions"
-RO_OUT=$($DC touch /workspace/odoo/test_ro 2>&1 || true)
-check "odoo is read-only" "read-only" "$RO_OUT"
+RW_ODOO=$($DC bash -c "touch /workspace/odoo/test_rw && rm /workspace/odoo/test_rw && echo WRITABLE" 2>&1)
+check "odoo is writable" "WRITABLE" "$RW_ODOO"
 RW_OUT=$($DC bash -c "touch /workspace/my-addons/test_rw && rm /workspace/my-addons/test_rw && echo WRITABLE" 2>&1)
 check "my-addons is writable" "WRITABLE" "$RW_OUT"
 

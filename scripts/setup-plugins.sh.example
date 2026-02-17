@@ -1,8 +1,0 @@
-#!/bin/bash
-# Plugin auto-setup — runs on first boot only.
-# Copy to scripts/setup-plugins.sh and customize.
-# This file is gitignored.
-#
-# Example:
-#   claude plugin marketplace add your-org/your-plugins
-#   claude plugin install your-plugin@your-marketplace

@@ -134,6 +134,11 @@ USER root
 RUN mkdir -p /var/lib/odoo && chown claude:claude /var/lib/odoo
 RUN mkdir -p /workspace && chown claude:claude /workspace
 
+RUN mkdir -p /config
+COPY config/CLAUDE.md /config/CLAUDE.md
+
+RUN echo "alias claude='claude --dangerously-skip-permissions'" >> /home/claude/.bashrc
+
 COPY scripts/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
