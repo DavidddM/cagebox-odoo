@@ -83,33 +83,20 @@ The entrypoint automatically rewrites all GitHub URLs (HTTPS, SSH, `git@`) to us
 - **Attach to terminal**: `docker exec -it -u claude claude-sandbox tmux attach -t main` — connects to the sandbox shell. Start Claude Code by running `claude --dangerously-skip-permissions`. Press `Ctrl-B D` to detach without killing the session.
 - **Logs**: `docker compose logs -f claude-sandbox`
 
-## Plugins
+## Plugins & MCP Servers
 
-Claude Code plugins can be auto-installed on first boot. Copy `scripts/setup-plugins.sh.example` to `scripts/setup-plugins.sh`, add your plugin commands, make it executable, and mount it in `docker-compose.override.yml`:
+Plugins and MCP servers are installed on first boot via a single setup script. Copy `scripts/setup-tools.sh.example` to `scripts/setup-tools.sh`, customize it, and mount it in `docker-compose.override.yml`:
 
 ```bash
-cp scripts/setup-plugins.sh.example scripts/setup-plugins.sh
-chmod +x scripts/setup-plugins.sh
-# Edit setup-plugins.sh with your plugin install commands, e.g.:
+cp scripts/setup-tools.sh.example scripts/setup-tools.sh
+chmod +x scripts/setup-tools.sh
+# Edit setup-tools.sh — uncomment or add plugin and MCP commands, e.g.:
 #   claude plugin marketplace add your-org/your-plugins
-#   claude plugin install your-plugin@your-plugins
-```
-
-Then uncomment the mount in `docker-compose.override.yml`. Plugins persist across restarts via the `claude-config` volume and only install on first boot.
-
-## MCP Servers
-
-Custom MCP servers can be added on first boot. Copy `scripts/setup-mcps.sh.example` to `scripts/setup-mcps.sh`, add your MCP commands, make it executable, and mount it in `docker-compose.override.yml`:
-
-```bash
-cp scripts/setup-mcps.sh.example scripts/setup-mcps.sh
-chmod +x scripts/setup-mcps.sh
-# Edit setup-mcps.sh with your MCP server commands, e.g.:
+#   claude plugin install your-plugin@your-marketplace
 #   claude mcp add my-server -- npx -y @some/mcp-server
-#   claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
 ```
 
-Then uncomment the mount in `docker-compose.override.yml`. MCP servers persist across restarts and only configure on first boot.
+Then uncomment the `setup-tools.sh` mount in `docker-compose.override.yml`. Both plugins and MCP servers persist across restarts via the `claude-config` volume and only install on first boot.
 
 ## Customization
 
@@ -131,9 +118,9 @@ Edit `docker-compose.override.yml`:
 services:
   claude-sandbox:
     volumes:
-      - ~/projects/odoo:/workspace/odoo:ro
+      - ~/projects/odoo:/workspace/odoo
       - ~/projects/my-addons:/workspace/my-addons
-      - ~/projects/enterprise:/workspace/enterprise:ro
+      # - ~/projects/enterprise:/workspace/enterprise
 ```
 
 ### Custom Odoo config
