@@ -57,6 +57,11 @@ if [ ! -f /home/claude/.claude/CLAUDE.md ]; then
     chown claude:claude /home/claude/.claude/CLAUDE.md
 fi
 
+if [ ! -d /home/claude/.claude/skills ]; then
+    cp -r /config/skills /home/claude/.claude/skills
+    chown -R claude:claude /home/claude/.claude/skills
+fi
+
 if [ -f /scripts/setup-tools.sh ]; then
     su -c '/scripts/setup-tools.sh' claude
 fi
