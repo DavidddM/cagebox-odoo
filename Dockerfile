@@ -136,6 +136,7 @@ RUN mkdir -p /workspace && chown claude:claude /workspace
 
 RUN mkdir -p /config
 COPY config/CLAUDE.md /config/CLAUDE.md
+COPY config/skills/ /config/skills/
 
 RUN echo "alias claude='claude --dangerously-skip-permissions'" >> /home/claude/.bashrc
 

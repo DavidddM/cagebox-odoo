@@ -47,3 +47,7 @@ Before running Odoo, always verify that `addons_path` in odoo.conf is correct fo
 Connection details are in `/etc/odoo/odoo.conf`.
 
 If a database is broken, corrupted, or in a bad state - do not waste time trying to fix it. Create a new one and move on. This is a sandbox, databases are disposable.
+
+## Skills Reference
+
+Odoo reference skills are available at ~/.claude/skills/ — Claude Code discovers them automatically via SKILL.md frontmatter.
