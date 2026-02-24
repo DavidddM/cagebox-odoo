@@ -66,6 +66,15 @@ if [ -f /scripts/setup-tools.sh ]; then
     su -c '/scripts/setup-tools.sh' claude
 fi
 
+if [ ! -f /home/claude/.claude/claude.json ]; then
+    cat > /home/claude/.claude/claude.json <<'EOF'
+{
+  "hasCompletedOnboarding": true
+}
+EOF
+    chown claude:claude /home/claude/.claude/claude.json
+fi
+
 if [ ! -L /home/claude/.claude.json ]; then
     rm -f /home/claude/.claude.json
     ln -s /home/claude/.claude/claude.json /home/claude/.claude.json
