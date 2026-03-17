@@ -51,6 +51,7 @@ without_demo = all
 EOF
     sudo mv /tmp/odoo.conf /etc/odoo/odoo.conf
 fi
+chown claude:claude /etc/odoo/odoo.conf
 
 if [ ! -f /home/claude/.claude/CLAUDE.md ]; then
     cp /config/CLAUDE.md /home/claude/.claude/CLAUDE.md
