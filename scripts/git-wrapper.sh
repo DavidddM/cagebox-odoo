@@ -38,7 +38,7 @@ esac
 /usr/local/lib/git-bin/git "$@"
 EXIT_CODE=$?
 
-if [ "$1" = "checkout" ] && echo "$PWD" | grep -q '/workspace/odoo'; then
+if { [ "$CMD" = "checkout" ] || [ "$CMD" = "switch" ]; } && echo "$PWD" | grep -q '/workspace/odoo'; then
     source /home/claude/odoo-venv/bin/activate
     pip install --quiet "setuptools<81"
     for req in /workspace/*/requirements.txt; do

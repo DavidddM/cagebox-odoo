@@ -50,8 +50,8 @@ list_db = True
 without_demo = all
 EOF
     sudo mv /tmp/odoo.conf /etc/odoo/odoo.conf
+    chown claude:claude /etc/odoo/odoo.conf
 fi
-chown claude:claude /etc/odoo/odoo.conf
 
 if [ ! -f /home/claude/.claude/CLAUDE.md ]; then
     cp /config/CLAUDE.md /home/claude/.claude/CLAUDE.md
@@ -61,10 +61,6 @@ fi
 if [ ! -d /home/claude/.claude/skills ]; then
     cp -r /config/skills /home/claude/.claude/skills
     chown -R claude:claude /home/claude/.claude/skills
-fi
-
-if [ -f /scripts/setup-tools.sh ]; then
-    su -c '/scripts/setup-tools.sh' claude
 fi
 
 if [ ! -f /home/claude/.claude/claude.json ]; then
@@ -79,6 +75,11 @@ fi
 if [ ! -L /home/claude/.claude.json ]; then
     rm -f /home/claude/.claude.json
     ln -s /home/claude/.claude/claude.json /home/claude/.claude.json
+fi
+
+if [ -f /scripts/setup-tools.sh ]; then
+    su -c '/scripts/setup-tools.sh' claude \
+        || echo "WARNING: setup-tools.sh failed; continuing boot" >&2
 fi
 
 su claude -c 'tmux new-session -d -s main -x 220 -y 50'

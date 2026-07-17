@@ -8,20 +8,21 @@ Docker sandbox for running Claude Code autonomously with Odoo development toolin
 
 ## Architecture
 
-Three services on an internal Docker network (no direct internet access):
+Four services on an internal Docker network (no direct internet access):
 
 - **claude-sandbox** — Ubuntu 24.04 with Python 3.12, Node.js 20, Claude Code, and Odoo dependencies
 - **db** — PostgreSQL 16
 - **squid-proxy** — Forward HTTP proxy bridging internal and external networks, whitelisting specific domains
+- **odoo-tunnel** — socat relay publishing Odoo's port 8069 on `127.0.0.1` only. The sandbox network is internal, so ports published directly on the sandbox don't route; this relay is the only way in, and the loopback binding keeps Odoo unreachable from the LAN
 
 ### Security Model
 
 Five layers of protection:
 
-1. **Container isolation** — Claude runs in a locked-down Ubuntu container with restricted sudo (package installation only) and no host access beyond mounted volumes
+1. **Container isolation** — Claude runs in a locked-down Ubuntu container with no host access beyond mounted volumes. Sudo is limited to a single root-owned wrapper (`pkg-install`) that installs named apt packages only — no options, no local `.deb` files — closing the `apt -o`/local-archive root escalation paths
 2. **Network proxy** — All outbound traffic routes through Squid, which only allows whitelisted domains (PyPI, npm, Anthropic API, GitHub). The GitHub REST API (`api.github.com`) is blocked, preventing programmatic write operations. No direct internet access from the sandbox
 3. **Git wrapper** — `git push`, `git remote add/set-url/remove/rename`, `git send-email`, `git request-pull`, `git notes push`, and `git lfs push` are blocked at two levels: a shell wrapper replacing `/usr/bin/git` and a pre-push hook as backup. Both are root-owned and read-only — the container user cannot modify them
-4. **Permission deny list** — Claude Code's settings.json blocks push and remote modification commands at the application level, before they reach the git wrapper
+4. **Managed permission policy** — a root-owned, read-only policy file at `/etc/claude-code/managed-settings.json` blocks push, remote modification, and pipe-to-shell commands at the application level, before they reach the git wrapper. It takes precedence over user settings, cannot be edited by the container user, and policy updates deploy on every rebuild
 5. **Credential scoping** — Designed for use with read-only GitHub tokens. With a fine-grained read-only token, write operations are rejected by GitHub regardless of what happens inside the container
 
 > **Known limitation:** With a write-capable token (such as a classic token with `repo` scope), a sufficiently determined agent could theoretically implement the git push protocol at the raw HTTPS level, bypassing all container-level protections. Squid cannot inspect paths inside HTTPS tunnels, so it cannot distinguish a push from a fetch. A read-only GitHub token eliminates this vector entirely — GitHub rejects the write server-side. Fine-grained read-only tokens are strongly recommended.
@@ -82,6 +83,7 @@ The entrypoint automatically rewrites all GitHub URLs (HTTPS, SSH, `git@`) to us
 
 - **Attach to terminal**: `docker exec -it -u claude claude-sandbox tmux attach -t main` — connects to the sandbox shell. Start Claude Code by running `claude --dangerously-skip-permissions`. Press `Ctrl-B D` to detach without killing the session.
 - **Logs**: `docker compose logs -f claude-sandbox`
+- **Odoo**: [http://127.0.0.1:8069](http://127.0.0.1:8069) once an Odoo server is running inside the sandbox — loopback only, not reachable from the LAN.
 
 ## Plugins & MCP Servers
 
@@ -140,7 +142,7 @@ Run the integration test suite from the host after starting the sandbox:
 ./scripts/test-sandbox.sh
 ```
 
-This verifies container health, git rewrites, push blocking, network filtering, database connectivity, Odoo import, mount permissions, and plugin/MCP installation.
+This verifies container health, git rewrites, push blocking, network filtering, database connectivity, Odoo import, mount permissions, plugin/MCP installation, the sudo lockdown and `pkg-install` wrapper, the managed policy file, and the tunnel's loopback binding.
 
 ## Build
 
@@ -167,4 +169,12 @@ docker compose down -v
 docker compose up -d
 ```
 
-The `-v` flag removes all volumes (pip cache, claude config, database). Use `docker compose down` without `-v` to preserve them.
+The `-v` flag removes all volumes (pip cache, claude config, database). This includes Claude's auth token and all session transcripts — use `docker compose down` without `-v` to preserve them.
+
+To reset only the databases, remove volumes selectively instead:
+
+```bash
+docker compose down
+docker volume rm cagebox-odoo_pg-data
+docker compose up -d
+```

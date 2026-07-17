@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push*)",
+      "Bash(git remote add*)",
+      "Bash(git remote set-url*)",
+      "Bash(git remote remove*)",
+      "Bash(git send-email*)",
+      "Bash(git request-pull*)",
+      "Bash(git lfs push*)",
+      "Bash(git remote rename*)",
+      "Bash(git notes push*)",
+      "Bash(curl*|*sh*)",
+      "Bash(curl*|*bash*)",
+      "Bash(wget*|*sh*)",
+      "Bash(wget*|*bash*)"
+    ]
+  }
+}

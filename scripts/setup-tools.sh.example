@@ -1,22 +1,31 @@
 #!/bin/bash
-# Plugin and MCP auto-setup — runs on every boot but skips
-# sections that are already configured.
-# Copy to scripts/setup-tools.sh and customize.
-# This file is gitignored.
+# Plugin and MCP auto-setup — runs on every boot; per-item guards skip
+# whatever is already configured, so items added later still deploy.
+# Copy to scripts/setup-tools.sh, replace the placeholder names, and mount
+# it (see docker-compose.override.example.yml). This file is gitignored.
 set -e
 
 # === Plugins ===
-if [ ! -f /home/claude/.claude/plugins/installed_plugins.json ]; then
-    echo "Installing plugins..."
-    # claude plugin marketplace add your-org/your-plugins
-    # claude plugin install your-plugin@your-marketplace
-    echo "Plugin setup complete."
+# `marketplace list` / `plugin list` are offline checks; re-running
+# `marketplace add` would needlessly re-fetch the marketplace every boot.
+if ! claude plugin marketplace list 2>/dev/null | grep -q 'your-plugins'; then
+    echo "Adding your-plugins marketplace..."
+    claude plugin marketplace add your-org/your-plugins
+fi
+if ! claude plugin list 2>/dev/null | grep -q 'your-plugin@your-plugins'; then
+    echo "Installing your-plugin..."
+    claude plugin install your-plugin@your-plugins
 fi
 
 # === MCP Servers ===
-if [ ! -f /home/claude/.claude/.mcp.json ]; then
-    echo "Setting up MCP servers..."
-    # claude mcp add my-server -- npx -y @some/mcp-server
-    # claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
-    echo "MCP setup complete."
+# Guard per-server with `claude mcp get`: registrations live in
+# ~/.claude/claude.json, and re-adding an existing server exits non-zero,
+# which is fatal under set -e.
+if ! claude mcp get my-server >/dev/null 2>&1; then
+    echo "Registering my-server MCP..."
+    claude mcp add my-server -- npx -y @some/mcp-server
+fi
+if ! claude mcp get db-server >/dev/null 2>&1; then
+    echo "Registering db-server MCP..."
+    claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
 fi

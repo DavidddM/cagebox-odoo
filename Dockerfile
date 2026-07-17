@@ -41,6 +41,26 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && npm install -g rtlcss \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libasound2t64 \
+    libatk-bridge2.0-0t64 \
+    libatk1.0-0t64 \
+    libatspi2.0-0t64 \
+    libcairo2 \
+    libcups2t64 \
+    libdbus-1-3 \
+    libdrm2 \
+    libgbm1 \
+    libnspr4 \
+    libnss3 \
+    libpango-1.0-0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    libxrandr2 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN WKHTML_ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "arm64" || echo "amd64") \
     && curl -fsSL -o /tmp/wkhtmltox.deb \
        "https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.jammy_${WKHTML_ARCH}.deb" \
@@ -52,8 +72,12 @@ RUN curl -fsSL https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
 RUN npm install -g @anthropic-ai/claude-code \
     && npm install -g @modelcontextprotocol/server-sequential-thinking
 
-RUN useradd -m -s /bin/bash -G sudo claude \
-    && echo "claude ALL=(ALL) NOPASSWD: /usr/bin/apt-get, /usr/bin/apt, /home/claude/odoo-venv/bin/pip, /usr/bin/pip3" > /etc/sudoers.d/claude
+RUN useradd -m -s /bin/bash claude \
+    && echo "claude ALL=(ALL) NOPASSWD: /usr/local/bin/pkg-install" > /etc/sudoers.d/claude \
+    && chmod 440 /etc/sudoers.d/claude
+
+COPY scripts/pkg-install.sh /usr/local/bin/pkg-install
+RUN chown root:root /usr/local/bin/pkg-install && chmod 755 /usr/local/bin/pkg-install
 
 USER claude
 WORKDIR /home/claude
@@ -114,6 +138,10 @@ RUN chmod +x /usr/local/bin/git-wrapper \
     && cp /usr/bin/git /usr/local/lib/git-bin/git \
     && rm /usr/bin/git \
     && ln -s /usr/local/bin/git-wrapper /usr/bin/git
+
+COPY config/managed-settings.json /etc/claude-code/managed-settings.json
+RUN chown root:root /etc/claude-code/managed-settings.json \
+    && chmod 444 /etc/claude-code/managed-settings.json
 
 RUN mkdir -p /home/claude/.config/git-hooks
 COPY scripts/pre-push /home/claude/.config/git-hooks/pre-push

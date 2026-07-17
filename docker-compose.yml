@@ -29,7 +29,6 @@ services:
     init: true
     build: .
     container_name: claude-sandbox
-    env_file: .env
     environment:
       HTTP_PROXY: http://squid-proxy:3128
       HTTPS_PROXY: http://squid-proxy:3128
@@ -61,10 +60,27 @@ services:
         condition: service_healthy
         # Optional: allows sandbox to start without DB for non-Odoo tasks
         required: false
-    ports:
-      - "${ODOO_PORT:-8069}:8069"
     stdin_open: true
     tty: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "su", "claude", "-c", "tmux has-session -t main"]
+      interval: 30s
+      start_period: 120s
+
+  # sandbox-net is internal:true, so ports published on claude-sandbox itself
+  # don't route; this dual-homed loopback relay is the only way in.
+  odoo-tunnel:
+    image: alpine/socat
+    command: TCP-LISTEN:8069,fork,reuseaddr TCP:claude-sandbox:8069
+    networks:
+      - sandbox-net
+      - internet
+    ports:
+      - "127.0.0.1:${ODOO_PORT:-8069}:8069"
+    depends_on:
+      - claude-sandbox
+    restart: unless-stopped
 
 networks:
   sandbox-net:

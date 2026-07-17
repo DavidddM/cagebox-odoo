@@ -151,6 +151,60 @@ echo "[12] Pip cache volume"
 PIP_OUT=$($DC mount 2>&1)
 check "pip cache mounted" "/home/claude/.cache/pip" "$PIP_OUT"
 
+# Sudo lockdown
+echo "[13] Sudo lockdown"
+SUDO_L=$($DC sudo -n -l 2>&1)
+check "pkg-install is granted" "pkg-install" "$SUDO_L"
+if echo "$SUDO_L" | grep -qE '/usr/bin/apt|pip'; then
+  echo "  ✗ sudoers still grants apt/pip directly"
+  FAIL=$((FAIL+1))
+else
+  echo "  ✓ no direct apt/pip sudo grants"
+  PASS=$((PASS+1))
+fi
+ID_OUT=$($DC id 2>&1)
+if echo "$ID_OUT" | grep -q '(sudo)'; then
+  echo "  ✗ claude is in the sudo group"
+  FAIL=$((FAIL+1))
+else
+  echo "  ✓ claude not in sudo group"
+  PASS=$((PASS+1))
+fi
+
+# pkg-install wrapper
+echo "[14] pkg-install wrapper"
+OPT_OUT=$($DC sudo -n pkg-install -o APT::Update::Pre-Invoke::=id 2>&1 || true)
+check "options are refused" "not allowed" "$OPT_OUT"
+DEB_OUT=$($DC sudo -n pkg-install ./x.deb 2>&1 || true)
+check "local .deb installs are refused" "not allowed" "$DEB_OUT"
+INSTALL_OUT=$($DC bash -c "sudo -n pkg-install --update >/dev/null 2>&1; sudo -n pkg-install jq 2>&1" || true)
+check "real install works" "newest version|setting up jq" "$INSTALL_OUT"
+
+# Git wrapper
+echo "[15] Git wrapper"
+BARE_GIT=$($DC git 2>&1 || true)
+if echo "$BARE_GIT" | grep -q 'unbound variable'; then
+  echo "  ✗ bare git crashes with unbound variable"
+  FAIL=$((FAIL+1))
+else
+  echo "  ✓ bare git exits cleanly"
+  PASS=$((PASS+1))
+fi
+
+# Managed policy
+echo "[16] Managed policy file"
+MANAGED_LS=$(docker exec claude-sandbox ls -l /etc/claude-code/managed-settings.json 2>&1)
+check "root-owned and read-only" "^-r--r--r-- .* root root" "$MANAGED_LS"
+MANAGED=$($DC cat /etc/claude-code/managed-settings.json 2>&1)
+check "deny list present" "git push" "$MANAGED"
+
+# Odoo tunnel
+echo "[17] Odoo tunnel"
+TUNNEL_PS=$(docker compose ps odoo-tunnel 2>&1)
+check "odoo-tunnel is running" "Up|running" "$TUNNEL_PS"
+TUNNEL_PORT=$(docker compose port odoo-tunnel 8069 2>&1)
+check "bound to loopback only" "^127.0.0.1:" "$TUNNEL_PORT"
+
 # Summary
 echo ""
 echo "=== Results ==="
