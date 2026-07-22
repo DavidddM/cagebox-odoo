@@ -3,3 +3,4 @@ docker-compose.override.yml
 scripts/setup-tools.sh
 .DS_Store
 .claude/settings.local.json
+.docs/

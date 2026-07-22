@@ -21,11 +21,13 @@ fi
 # Guard per-server with `claude mcp get`: registrations live in
 # ~/.claude/claude.json, and re-adding an existing server exits non-zero,
 # which is fatal under set -e.
+# --scope user makes servers visible from every project directory; the
+# default (local scope) binds them to the cwd of this script only.
 if ! claude mcp get my-server >/dev/null 2>&1; then
     echo "Registering my-server MCP..."
-    claude mcp add my-server -- npx -y @some/mcp-server
+    claude mcp add --scope user my-server -- npx -y @some/mcp-server
 fi
 if ! claude mcp get db-server >/dev/null 2>&1; then
     echo "Registering db-server MCP..."
-    claude mcp add db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
+    claude mcp add --scope user db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
 fi
