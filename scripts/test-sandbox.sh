@@ -56,12 +56,30 @@ for i in $(seq 1 60); do
   sleep 1
 done
 
-# Git rewrites
-echo "[3] Git URL rewrites"
+# GitHub broker
+echo "[3] GitHub broker"
 GIT_CFG=$($DC git config --global --list 2>&1)
-check "insteadOf git@github.com:" "insteadof=git@github.com:" "$GIT_CFG"
-check "insteadOf ssh://git@github.com/" "insteadof=ssh://git@github.com/" "$GIT_CFG"
-check "insteadOf https://github.com/" "insteadof=https://github.com/" "$GIT_CFG"
+check "https remotes go to the broker" "url.http://squid-proxy:3129/.insteadof=https://github.com/" "$GIT_CFG"
+check "SSH remotes go to the broker" "url.http://squid-proxy:3129/.insteadof=git@github.com:" "$GIT_CFG"
+TOKEN_ENV=$(docker exec claude-sandbox printenv GITHUB_TOKEN 2>/dev/null || true)
+if [ -z "$TOKEN_ENV" ]; then
+  echo "  ✓ no GITHUB_TOKEN in the sandbox environment"
+  PASS=$((PASS+1))
+else
+  echo "  ✗ GITHUB_TOKEN is present in the sandbox environment"
+  FAIL=$((FAIL+1))
+fi
+if echo "$GIT_CFG" | grep -qE 'ghp_|github_pat_'; then
+  echo "  ✗ a token appears in the sandbox git config"
+  FAIL=$((FAIL+1))
+else
+  echo "  ✓ no token in the sandbox git config"
+  PASS=$((PASS+1))
+fi
+LS_OUT=$($DC git ls-remote --heads https://github.com/odoo/upgrade-util 2>&1)
+check "fetch through the broker" "refs/heads/master" "$LS_OUT"
+PUSH_CODE=$($DC curl -s -o /dev/null -w '%{http_code}' --max-time 10 'http://squid-proxy:3129/odoo/upgrade-util/info/refs?service=git-receive-pack' 2>&1)
+check "push refused by the broker" "^403$" "$PUSH_CODE"
 
 # Git push blocking
 echo "[4] Git push blocking"

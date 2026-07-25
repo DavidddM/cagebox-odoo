@@ -1,6 +1,6 @@
 # Cagebox Odoo — Claude Code Sandbox
 
-Docker sandbox for running Claude Code autonomously with Odoo development tooling. Network-isolated container with a forward proxy whitelist, git push protection, and automatic plugin/MCP setup.
+Docker sandbox for running Claude Code autonomously with Odoo development tooling. Network-isolated container with a forward proxy whitelist, credential-free GitHub access through the proxy, git push protection, and automatic plugin/MCP setup.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Four services on an internal Docker network (no direct internet access):
 
 - **claude-sandbox** — Ubuntu 24.04 with Python 3.12, Node.js 20, Claude Code, and Odoo dependencies
 - **db** — PostgreSQL 16
-- **squid-proxy** — Forward HTTP proxy bridging internal and external networks, whitelisting specific domains
+- **squid-proxy** — Forward HTTP proxy bridging internal and external networks, whitelisting specific domains. A second port acts as a GitHub fetch broker: it attaches the operator's token on the way out and refuses pushes, so the sandbox never holds a credential
 - **odoo-tunnel** — socat relay publishing Odoo's port 8069 on `127.0.0.1` only. The sandbox network is internal, so ports published directly on the sandbox don't route; this relay is the only way in, and the loopback binding keeps Odoo unreachable from the LAN
 
 ### Security Model
@@ -23,9 +23,7 @@ Five layers of protection:
 2. **Network proxy** — All outbound traffic routes through Squid, which only allows whitelisted domains (PyPI, npm, Anthropic API, GitHub). The GitHub REST API (`api.github.com`) is blocked, preventing programmatic write operations. No direct internet access from the sandbox
 3. **Git wrapper** — `git push`, `git remote add/set-url/remove/rename`, `git send-email`, `git request-pull`, `git notes push`, and `git lfs push` are blocked at two levels: a shell wrapper replacing `/usr/bin/git` and a pre-push hook as backup. Both are root-owned and read-only — the container user cannot modify them
 4. **Managed permission policy** — a root-owned, read-only policy file at `/etc/claude-code/managed-settings.json` blocks push, remote modification, and pipe-to-shell commands at the application level, before they reach the git wrapper. It takes precedence over user settings, cannot be edited by the container user, and policy updates deploy on every rebuild
-5. **Credential scoping** — Designed for use with read-only GitHub tokens. With a fine-grained read-only token, write operations are rejected by GitHub regardless of what happens inside the container
-
-> **Known limitation:** With a write-capable token (such as a classic token with `repo` scope), a sufficiently determined agent could theoretically implement the git push protocol at the raw HTTPS level, bypassing all container-level protections. Squid cannot inspect paths inside HTTPS tunnels, so it cannot distinguish a push from a fetch. A read-only GitHub token eliminates this vector entirely — GitHub rejects the write server-side. Fine-grained read-only tokens are strongly recommended.
+5. **No credentials in the sandbox** — The sandbox holds no GitHub token or key. Git reaches GitHub only through the proxy's broker port, in plain HTTP on the internal network, where the proxy can see each request. It attaches the token on the way out and refuses `git-receive-pack` and LFS requests with HTTP 403. A push cannot succeed from inside the sandbox regardless of the token's scope, and there is no credential inside it to leak into logs or transcripts
 
 ## Quickstart
 
@@ -62,22 +60,13 @@ Set `ANTHROPIC_API_KEY` in `.env` with a key from [console.anthropic.com](https:
 
 ## GitHub Token
 
-For accessing private repositories inside the sandbox, set `GITHUB_TOKEN` in `.env`.
+For private repositories, set `GITHUB_TOKEN` in `.env`. The token is read by the proxy container only. The sandbox never sees it: not in its environment, not in its git config, not in any URL. Without a token, public repositories still work.
 
-**Recommended: Fine-grained read-only token**
+Git traffic to GitHub is routed to the proxy's broker port. The sandbox entrypoint maps every GitHub URL form (`https://github.com/`, `git@github.com:`, `ssh://git@github.com/`) to `http://squid-proxy:3129/`, so `git fetch`, `git pull`, `git clone`, submodules, and `pip`/`uvx` installs from GitHub work unchanged. Inside the sandbox, remotes display as `http://squid-proxy:3129/<owner>/<repo>`. The proxy adds the token to each request and refuses push and LFS requests, so write protection does not depend on the token's scope.
 
-Create a fine-grained token at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new):
-- Set "Repository access" to "Only select repositories" and select the repos you need
-- Under "Repository permissions", set **Contents** to **Read-only**
-- Leave everything else at "No access"
+A fine-grained token with **Contents: Read-only** is still recommended as a second lock. Create one at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) with the resource owner and repository access you need; "All repositories" under one owner is a single token, not one per repo.
 
-With a read-only token, code cannot be pushed to GitHub even if all sandbox protections are bypassed. This is the strongest guarantee.
-
-**Alternative: Classic token**
-
-Create a classic token at [github.com/settings/tokens/new](https://github.com/settings/tokens/new) with `repo` scope. This grants read AND write access to all repos. The sandbox blocks pushes via git wrapper, pre-push hook, permission deny list, and API blocking — but with a write-capable token, a determined agent could theoretically bypass all container-level protections by implementing the git pack protocol directly over HTTPS to `github.com`. Squid cannot inspect paths inside HTTPS tunnels, so it cannot distinguish a push from a fetch at the network level. A read-only token eliminates this vector entirely by having GitHub reject the write server-side.
-
-The entrypoint automatically rewrites all GitHub URLs (HTTPS, SSH, `git@`) to use token authentication, so `git fetch`, `git pull`, and `git clone` work transparently.
+Changing the token requires recreating the proxy: `docker compose up -d`. The broker itself is configured in `config/squid-github.conf`.
 
 ## Monitoring
 
@@ -142,7 +131,7 @@ Run the integration test suite from the host after starting the sandbox:
 ./scripts/test-sandbox.sh
 ```
 
-This verifies container health, git rewrites, push blocking, network filtering, database connectivity, Odoo import, mount permissions, plugin/MCP installation, the sudo lockdown and `pkg-install` wrapper, the managed policy file, and the tunnel's loopback binding.
+This verifies container health, the GitHub broker (no token inside the sandbox, fetch works, push refused), push blocking, network filtering, database connectivity, Odoo import, mount permissions, plugin/MCP installation, the sudo lockdown and `pkg-install` wrapper, the managed policy file, and the tunnel's loopback binding.
 
 ## Build
 

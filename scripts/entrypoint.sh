@@ -7,14 +7,10 @@ fi
 
 rm -f /home/claude/.gitconfig
 
-if [ -n "${GITHUB_TOKEN:-}" ]; then
-  HOME=/home/claude git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "git@github.com:"
-  HOME=/home/claude git config --global --add url."https://${GITHUB_TOKEN}@github.com/".insteadOf "ssh://git@github.com/"
-  HOME=/home/claude git config --global --add url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
-else
-  HOME=/home/claude git config --global url."https://github.com/".insteadOf "git@github.com:"
-  HOME=/home/claude git config --global --add url."https://github.com/".insteadOf "ssh://git@github.com/"
-fi
+GITHUB_BROKER=http://squid-proxy:3129/
+HOME=/home/claude /usr/local/lib/git-bin/git config --global url."${GITHUB_BROKER}".insteadOf "https://github.com/"
+HOME=/home/claude /usr/local/lib/git-bin/git config --global --add url."${GITHUB_BROKER}".insteadOf "git@github.com:"
+HOME=/home/claude /usr/local/lib/git-bin/git config --global --add url."${GITHUB_BROKER}".insteadOf "ssh://git@github.com/"
 
 if [ -n "${GIT_USER_NAME:-}" ]; then
     HOME=/home/claude /usr/local/lib/git-bin/git config --global user.name "$GIT_USER_NAME"

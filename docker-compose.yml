@@ -17,9 +17,12 @@ services:
     restart: unless-stopped
 
   squid-proxy:
-    image: ubuntu/squid
+    build: ./proxy
+    environment:
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     volumes:
       - ./config/squid.conf:/etc/squid/squid.conf:ro
+      - ./config/squid-github.conf:/etc/squid/squid-github.conf:ro
     networks:
       - sandbox-net
       - internet
@@ -34,15 +37,15 @@ services:
       HTTPS_PROXY: http://squid-proxy:3128
       http_proxy: http://squid-proxy:3128
       https_proxy: http://squid-proxy:3128
-      NO_PROXY: db,localhost,127.0.0.1,host.docker.internal
-      no_proxy: db,localhost,127.0.0.1,host.docker.internal
+      NO_PROXY: db,squid-proxy,localhost,127.0.0.1,host.docker.internal
+      no_proxy: db,squid-proxy,localhost,127.0.0.1,host.docker.internal
       ODOO_DB_HOST: ${ODOO_DB_HOST:-db}
       ODOO_DB_PORT: ${ODOO_DB_PORT:-5432}
       ODOO_DB_USER: ${ODOO_DB_USER:-odoo}
       ODOO_DB_PASSWORD: ${ODOO_DB_PASSWORD:-odoo}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PGPASSWORD: ${PG_PASSWORD:-odoo}
-      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GIT_TERMINAL_PROMPT: "0"
       GIT_USER_NAME: ${GIT_USER_NAME:-}
       GIT_USER_EMAIL: ${GIT_USER_EMAIL:-}
       NODE_OPTIONS: "--max-old-space-size=4096"

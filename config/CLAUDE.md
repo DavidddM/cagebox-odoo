@@ -57,6 +57,10 @@ Odoo and enterprise repos have all needed branches available locally. Never run 
 
 Same applies to any git submodules within the project. Do this check EVERY time. Do not assume the current branch is correct.
 
+### GitHub Access
+
+GitHub is reached only through the proxy. Remotes display as `http://squid-proxy:3129/<owner>/<repo>`; that is expected, not a misconfiguration. Fetch, pull and clone work for any repository the operator's token can read. Push is refused by the proxy with HTTP 403, in addition to being blocked locally. There is no GitHub credential inside this container, so do not look for one.
+
 ### Addons Path
 
 Before running Odoo, always verify that `addons_path` in odoo.conf is correct for the current project. Only include addons directories that belong to the project you are working on. Do not reference another project's submodules or addon directories.
