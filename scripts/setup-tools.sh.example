@@ -3,31 +3,34 @@
 # whatever is already configured, so items added later still deploy.
 # Copy to scripts/setup-tools.sh, replace the placeholder names, and mount
 # it (see docker-compose.override.example.yml). This file is gitignored.
-set -e
+failed=0
+run() { "$@" || { echo "setup-tools: failed: $*" >&2; failed=1; }; }
 
 # === Plugins ===
 # `marketplace list` / `plugin list` are offline checks; re-running
 # `marketplace add` would needlessly re-fetch the marketplace every boot.
 if ! claude plugin marketplace list 2>/dev/null | grep -q 'your-plugins'; then
     echo "Adding your-plugins marketplace..."
-    claude plugin marketplace add your-org/your-plugins
+    run claude plugin marketplace add your-org/your-plugins
 fi
 if ! claude plugin list 2>/dev/null | grep -q 'your-plugin@your-plugins'; then
     echo "Installing your-plugin..."
-    claude plugin install your-plugin@your-plugins
+    run claude plugin install your-plugin@your-plugins
 fi
 
 # === MCP Servers ===
 # Guard per-server with `claude mcp get`: registrations live in
 # ~/.claude/claude.json, and re-adding an existing server exits non-zero,
-# which is fatal under set -e.
+# which would be reported as a failure on every boot.
 # --scope user makes servers visible from every project directory; the
 # default (local scope) binds them to the cwd of this script only.
 if ! claude mcp get my-server >/dev/null 2>&1; then
     echo "Registering my-server MCP..."
-    claude mcp add --scope user my-server -- npx -y @some/mcp-server
+    run claude mcp add --scope user my-server -- npx -y @some/mcp-server
 fi
 if ! claude mcp get db-server >/dev/null 2>&1; then
     echo "Registering db-server MCP..."
-    claude mcp add --scope user db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
+    run claude mcp add --scope user db-server -- npx -y @modelcontextprotocol/server-postgres "postgresql://user:pass@db:5432/mydb"
 fi
+
+exit "$failed"

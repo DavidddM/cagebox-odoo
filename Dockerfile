@@ -88,6 +88,7 @@ RUN python3.12 -m venv /home/claude/odoo-venv
 
 ENV PATH="/home/claude/odoo-venv/bin:/home/claude/.local/bin:${PATH}"
 ENV VIRTUAL_ENV="/home/claude/odoo-venv"
+ENV LANG=C.UTF-8
 
 RUN pip install --no-cache-dir \
     Babel \
